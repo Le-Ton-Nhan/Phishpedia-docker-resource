@@ -1,5 +1,3 @@
-include LICENSE
-include README.md
 recursive-include phishpedia/src/detectron2_pedia/configs/*
 include phishpedia/src/detectron2_pedia/output/rcnn_2/rcnn_bet365.pth
 include phishpedia/src/siamese_pedia/domain_map.pkl
