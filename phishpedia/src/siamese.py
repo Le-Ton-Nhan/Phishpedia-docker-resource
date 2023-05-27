@@ -109,7 +109,7 @@ def phishpedia_classifier_logo(logo_boxes,
     with open(domain_map_path, 'rb') as handle:
         domain_map = pickle.load(handle)
 
-    print('number of logo boxes:', len(logo_boxes))
+    print('Number of logo boxes:', len(logo_boxes))
     matched_coord = None
     siamese_conf = None
 
@@ -123,20 +123,33 @@ def phishpedia_classifier_logo(logo_boxes,
             target_this, domain_this, this_conf = siamese_inference(model, domain_map,
                                                                     logo_feat_list, file_name_list,
                                                                     shot_path, bbox, t_s=ts, grayscale=False)
+            
+            print("domain_this: ", domain_this)
+            print("url: ", tldextract.extract(url).domain)
+            if domain_this is None:
+                isBegninDomains = False
+            else: 
+                isBegninDomains = tldextract.extract(url).domain in domain_this
 
             # print(target_this, domain_this, this_conf)
             # domain matcher to avoid FP
-            if (target_this is not None) and (tldextract.extract(url).domain not in domain_this):
-                # FIXME: avoid fp due to godaddy domain parking, ignore webmail provider (ambiguous)
-                if target_this == 'GoDaddy' or target_this == "Webmail Provider":
-                    target_this = None  # ignore the prediction
-                    this_conf = None
-                pred_target = target_this
-                matched_coord = coord
-                siamese_conf = this_conf
-                break  # break if target is matched
+            # if (target_this is not None) and (tldextract.extract(url).domain not in domain_this):
+            #     # FIXME: avoid fp due to godaddy domain parking, ignore webmail provider (ambiguous)
+            #     # if target_this == 'GoDaddy' or target_this == "Webmail Provider":
+            #     #     target_this = None  # ignore the prediction
+            #     #     this_conf = None
+            #     print("----------------> target_this: ", target_this)
+            #     pred_target = target_this
+            #     matched_coord = coord
+            #     siamese_conf = this_conf
+            #     break  # break if target is matched
             if i >= 2:  # only look at top-2 logo
                 break
+            pred_target = target_this
+            matched_coord = coord
+            siamese_conf = this_conf
+            if pred_target is not None:
+                break
 
-    return brand_converter(pred_target), matched_coord, siamese_conf
+    return brand_converter(pred_target), matched_coord, siamese_conf, isBegninDomains
 
