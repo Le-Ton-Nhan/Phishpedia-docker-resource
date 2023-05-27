@@ -1,3 +1,5 @@
 *.zip
 *.pkl
 *.pth*
+phishpedia/src/siamese_pedia/expand_targetlist/
+**/__pycache__/**
