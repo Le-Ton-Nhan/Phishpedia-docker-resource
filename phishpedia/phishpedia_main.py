@@ -38,11 +38,15 @@ def phishpedia_prediction(url, screenshot_path, ELE_MODEL, SIAMESE_THRE, SIAMESE
     print("Entering phishpedia")
 
     ####################### Step1: layout detector ##############################################
-    pred_boxes, _, _, _ = pred_rcnn(im=screenshot_path, predictor=ELE_MODEL)
+    # logo_boxes, logo_scores, input_boxes, input_scores
+    pred_boxes, _, input_boxes, input_scores = pred_rcnn(im=screenshot_path, predictor=ELE_MODEL)
+    print("------------->", input_boxes)
     if pred_boxes is not None:
         pred_boxes = pred_boxes.detach().cpu().numpy()
-     
+        input_boxes = input_boxes.detach().cpu().numpy()
+
     plotvis = vis(screenshot_path, pred_boxes)
+    
     print("plot")
     # If no element is reported
     if pred_boxes is None or len(pred_boxes) == 0:
@@ -64,33 +68,36 @@ def phishpedia_prediction(url, screenshot_path, ELE_MODEL, SIAMESE_THRE, SIAMESE
 
     if pred_target is None:
         print('Did not match to any brand, report as benign')
-        return phish_category, pred_target, plotvis, siamese_conf, pred_boxes
+        return phish_category, pred_target, plotvis, input_boxes,siamese_conf, pred_boxes
     elif isBegninDomains == True:
         phish_category = 0
-        return phish_category, pred_target, plotvis, siamese_conf, pred_boxes
+        cv2.putText(plotvis, "Target has been identified as normal: {} with confidence {:.4f}".format(pred_target, siamese_conf),
+                    (int(matched_coord[0] - 20), int(matched_coord[1] + 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+        return phish_category, pred_target, plotvis, input_boxes, siamese_conf, pred_boxes
     else:
         
         phish_category = 1
         # Visualize, add annotations
-        cv2.putText(plotvis, "Target: {} with confidence {:.4f}".format(pred_target, siamese_conf),
-                    (int(matched_coord[0] + 20), int(matched_coord[1] + 20)),
+        cv2.putText(plotvis, "Target has been identified as phishing: {} with confidence {:.4f}".format(pred_target, siamese_conf),
+                    (int(matched_coord[0] - 20), int(matched_coord[1] + 20)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
 
-    return phish_category, pred_target, plotvis, siamese_conf, pred_boxes
+    return phish_category, pred_target, plotvis,input_boxes ,siamese_conf, pred_boxes
 
 
-def runit(full_path, results, ELE_MODEL, SIAMESE_THRE, SIAMESE_MODEL, LOGO_FEATS, LOGO_FILES, DOMAIN_MAP_PATH):
-    results_path = results
+def runit(full_path,  ELE_MODEL, SIAMESE_THRE, SIAMESE_MODEL, LOGO_FEATS, LOGO_FILES, DOMAIN_MAP_PATH):
+    # results_path = results
 
-    if not os.path.exists(results_path):
-        with open(results_path, "w+") as f:
-            f.write("folder" + "\t")
-            f.write("url" + "\t")
-            f.write("phish" + "\t")
-            f.write("prediction" + "\t")  # write top1 prediction only
-            f.write("siamese_conf" + "\t")
-            f.write("vt_result" + "\t")
-            f.write("runtime" + "\n")
+    # if not os.path.exists(results_path):
+    #     with open(results_path, "w+") as f:
+    #         f.write("folder" + "\t")
+    #         f.write("url" + "\t")
+    #         f.write("phish" + "\t")
+    #         f.write("prediction" + "\t")  # write top1 prediction only
+    #         f.write("siamese_conf" + "\t")
+    #         f.write("vt_result" + "\t")
+    #         f.write("runtime" + "\n")
 
     
     start_time = time.time()
@@ -102,7 +109,7 @@ def runit(full_path, results, ELE_MODEL, SIAMESE_THRE, SIAMESE_MODEL, LOGO_FEATS
     url = open(info_path, encoding='ISO-8859-1').read()
     
 
-    phish_category, phish_target, plotvis, siamese_conf, pred_boxes = phishpedia_prediction(url=url, screenshot_path=screenshot_path,
+    phish_category, phish_target, plotvis,input_boxes, siamese_conf, pred_boxes = phishpedia_prediction(url=url, screenshot_path=screenshot_path,
                                                                             ELE_MODEL=ELE_MODEL,
                                                                             SIAMESE_THRE=SIAMESE_THRE,
                                                                             SIAMESE_MODEL=SIAMESE_MODEL,
@@ -121,8 +128,8 @@ def runit(full_path, results, ELE_MODEL, SIAMESE_THRE, SIAMESE_MODEL, LOGO_FEATS
             if vt_scan(url) is not None:
                 positive, total, scans_result = vt_scan(url)
                 print("Positive VT scan!")
-                
-                vt_result = str(positive) + "/" + str(total) + "\n" + scans_result
+                vt_result = str(positive) + "/" + str(total) + "-" + scans_result 
+                print(vt_result)
             else:
                 print("Negative VT scan!")
                 vt_result = "None"
@@ -134,6 +141,15 @@ def runit(full_path, results, ELE_MODEL, SIAMESE_THRE, SIAMESE_MODEL, LOGO_FEATS
     img_path = os.path.join(full_path, "predict.png")
     if plotvis is not None:
         cv2.imwrite(img_path, plotvis)
+        co = inputBox(input_boxes)
+        plotvis_input =  vis(img_path, input_boxes)
+
+        if plotvis_input is not None and co is not None:
+            # print("input_scores --------> ", input_scores)
+            cv2.putText(plotvis_input, "Input box detection",
+                    (int(co[0] + 50), int(co[1] + 80)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (11, 77, 218), 2)
+            cv2.imwrite(img_path, plotvis_input)
     
     return phish_category, phish_target, siamese_conf, vt_result, img_path
     # write results as well as predicted images

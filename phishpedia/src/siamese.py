@@ -153,3 +153,11 @@ def phishpedia_classifier_logo(logo_boxes,
 
     return brand_converter(pred_target), matched_coord, siamese_conf, isBegninDomains
 
+
+def inputBox(input_boxes):
+    matched_coord = None
+    if len(input_boxes) > 0:
+        for i, coord in enumerate(input_boxes):
+            
+            matched_coord = coord
+    return matched_coord

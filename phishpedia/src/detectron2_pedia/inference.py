@@ -22,10 +22,13 @@ def pred_rcnn(im, predictor):
         return None, None, None, None
 
     outputs = predictor(im)
+    print("OUTPUT --------> ", outputs)
 
     instances = outputs['instances']
+    print("instances --------> ", instances)
     pred_classes = instances.pred_classes  # tensor
     pred_boxes = instances.pred_boxes  # Boxes object
+    print("instances class --------> ", pred_classes)
 
     logo_boxes = pred_boxes[pred_classes == 1].tensor
     input_boxes = pred_boxes[pred_classes == 0].tensor
